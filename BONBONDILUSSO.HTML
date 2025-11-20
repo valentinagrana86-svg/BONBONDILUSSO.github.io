@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Registro de Ventas - Bonbon Di Lusso</title>
+  <style>
+    :root{--bg:#5a1f1b;--panel:#6b2622;--gold:#d4b36a;--cream:#f7efe4}
+    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;background:linear-gradient(180deg,var(--bg),#3a1513);color:var(--cream);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:100%;max-width:420px;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.03));border-radius:18px;padding:20px 20px 28px;box-shadow:0 8px 30px rgba(0,0,0,0.6);border:1px solid rgba(212,179,106,0.06)}
+    .header{display:flex;flex-direction:column;align-items:center;gap:10px}
+    .logo{width:220px;height:120px;background-image:url('/mnt/data/61eaa336-fde5-4762-b2a9-80e33a3e50ef.png');background-size:cover;background-position:center;border-radius:12px}
+    h1{font-size:22px;margin:0;color:var(--gold);text-align:center}
+    p.subtitle{margin:0;font-size:13px;opacity:0.9;text-align:center}
+
+    form{margin-top:14px;display:grid;gap:10px}
+    label{font-size:13px;color:var(--cream);display:block;margin-bottom:6px}
+    input[type=text], input[type=email], input[type=number], select{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--cream);font-size:14px}
+    .row{display:flex;gap:10px}
+    .btn{background:transparent;border:1px solid var(--gold);color:var(--gold);padding:10px;border-radius:10px;font-weight:600;cursor:pointer}
+    .btn.primary{background:var(--gold);color:#331a0e}
+    .info{background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;font-size:14px;margin-top:8px;color:var(--cream)}
+    table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+    table th, table td{padding:8px;border-bottom:1px dashed rgba(255,255,255,0.03);text-align:left}
+    .small{font-size:12px;opacity:0.9}
+    footer{margin-top:12px;text-align:center;font-size:12px;color:rgba(255,255,255,0.6)}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="logo" aria-hidden="true"></div>
+      <h1>Registro de Ventas - Bonbon Di Lusso</h1>
+      <p class="subtitle">Registra la venta y otorga el 5% en puntos automáticamente</p>
+    </div>
+
+    <form id="saleForm">
+      <div>
+        <label for="cliente">Nombre del cliente</label>
+        <input id="cliente" type="text" placeholder="Ej. Ana Pérez" required>
+      </div>
+      <div>
+        <label for="email">Correo electrónico</label>
+        <input id="email" type="email" placeholder="cliente@ejemplo.com" required>
+      </div>
+      <div>
+        <label for="nivel">Nivel de membresía</label>
+        <select id="nivel">
+          <option value="Bronce">Bronce</option>
+          <option value="Plata">Plata</option>
+          <option value="Oro">Oro</option>
+        </select>
+        <div class="small">El sistema da el 5% del monto de la compra como puntos. El nivel queda registrado para reportes.</div>
+      </div>
+      <div>
+        <label for="monto">Monto de la compra (MXN)</label>
+        <input id="monto" type="number" min="0" step="0.01" placeholder="0.00" required>
+      </div>
+
+      <div class="row">
+        <button type="submit" class="btn primary">Registrar venta</button>
+        <button type="button" id="limpiar" class="btn">Limpiar</button>
+      </div>
+    </form>
+
+    <div id="resultado" class="info" style="display:none"></div>
+
+    <h3 style="margin-top:14px;color:var(--gold)">Historial de Ventas</h3>
+    <div style="max-height:220px;overflow:auto">
+      <table id="tablaVentas">
+        <thead>
+          <tr><th>Fecha</th><th>Cliente</th><th>Nivel</th><th>Monto</th><th>Puntos otorgados</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button id="exportCsv" class="btn">Exportar CSV</button>
+      <button id="reset" class="btn">Reset datos</button>
+    </div>
+
+    <footer>Imagen usada: /mnt/data/61eaa336-fde5-4762-b2a9-80e33a3e50ef.png</footer>
+  </div>
+
+  <script>
+    // Funcionalidad principal: almacenar ventas y sumar puntos (5% del monto)
+    const form = document.getElementById('saleForm');
+    const resultado = document.getElementById('resultado');
+    const tablaBody = document.querySelector('#tablaVentas tbody');
+
+    // Cargar historial desde localStorage
+    const STORAGE_KEY = 'bonbon_ventas_v1';
+    function cargar(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }
+    function guardar(datos){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(datos));
+    }
+
+    function render(){
+      const datos = cargar();
+      tablaBody.innerHTML = '';
+      datos.slice().reverse().forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${new Date(row.fecha).toLocaleString()}</td><td>${row.cliente}</td><td>${row.nivel}</td><td>$${Number(row.monto).toFixed(2)}</td><td>${Number(row.puntos).toFixed(2)}</td>`;
+        tablaBody.appendChild(tr);
+      });
+    }
+
+    form.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const cliente = document.getElementById('cliente').value.trim();
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const nivel = document.getElementById('nivel').value;
+      const monto = Number(document.getElementById('monto').value) || 0;
+
+      if(!cliente || !email || monto <= 0){
+        resultado.style.display='block';
+        resultado.textContent = 'Completa los campos correctamente. El monto debe ser mayor a 0.';
+        return;
+      }
+
+      // PUNTOS = 5% del monto
+      const puntos = +(monto * 0.05).toFixed(2);
+
+      // Guardar venta
+      const datos = cargar();
+      datos.push({fecha: Date.now(), cliente, email, nivel, monto, puntos});
+      guardar(datos);
+      render();
+
+      // Actualizar puntos acumulados por cliente (por email)
+      const claves = 'bonbon_puntos_v1';
+      const rawPts = localStorage.getItem(claves);
+      const ptsObj = rawPts ? JSON.parse(rawPts) : {};
+      ptsObj[email] = (ptsObj[email] || 0) + puntos;
+      localStorage.setItem(claves, JSON.stringify(ptsObj));
+
+      resultado.style.display='block';
+      resultado.innerHTML = `Venta registrada: <strong>${cliente}</strong><br>Se otorgaron <strong>${puntos.toFixed(2)}</strong> puntos (5% de $${monto.toFixed(2)}).<br>Total acumulado: <strong>${ptsObj[email].toFixed(2)}</strong> puntos.`;
+
+      form.reset();
+    });
+
+    document.getElementById('limpiar').addEventListener('click', ()=>{form.reset(); resultado.style.display='none';});
+
+    document.getElementById('exportCsv').addEventListener('click', ()=>{
+      const datos = cargar();
+      if(datos.length===0){alert('No hay datos para exportar');return}
+      let csv = 'fecha,cliente,email,nivel,monto,puntos\n';
+      datos.forEach(r=>{
+        csv += `${new Date(r.fecha).toISOString()},"${r.cliente}",${r.email},${r.nivel},${r.monto},${r.puntos}\n`;
+      });
+      const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'ventas_bonbon.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('reset').addEventListener('click', ()=>{
+      if(!confirm('¿Eliminar todo el historial y puntos acumulados?')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('bonbon_puntos_v1');
+      render();
+      resultado.style.display='block'; resultado.textContent='Datos reiniciados.';
+    });
+
+    // Inicializar
+    render();
+  </script>
+</body>
+</html>
